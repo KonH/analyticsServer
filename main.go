@@ -5,19 +5,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
+var history []url.Values
+
+func sendHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	jsonStr, err := json.Marshal(query)
-	if err != nil {
+	history = append(history, query)
+}
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	response, err := json.Marshal(history)
+	if err == nil {
+		fmt.Fprintf(w, "%s", response)
+	} else {
 		log.Fatal(err)
 	}
-	fmt.Fprintf(w, "%s", jsonStr)
 }
 
 func main() {
 	fmt.Println("Start server.")
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/send", sendHandler)
+	http.HandleFunc("/get", getHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
