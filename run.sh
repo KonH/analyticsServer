@@ -1,2 +1,1 @@
-./build.sh
-bin/server
+go run -race cmd/main.go

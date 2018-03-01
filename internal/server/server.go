@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -9,19 +9,22 @@ import (
 	"github.com/globalsign/mgo"
 )
 
-type dbConfig struct {
-	dbName   string
-	collName string
+// Config
+type Config struct {
+	ListenTo string
+	DbHost   string
+	DbName   string
+	CollName string
 }
 
-func sendHandler(cfg dbConfig, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
-	c := db.DB(cfg.dbName).C(cfg.collName)
+func sendHandler(cfg *Config, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
+	c := db.DB(cfg.DbName).C(cfg.CollName)
 	item := r.URL.Query()
 	c.Insert(item)
 }
 
-func getHandler(cfg dbConfig, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
-	c := db.DB(cfg.dbName).C(cfg.collName)
+func getHandler(cfg *Config, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
+	c := db.DB(cfg.DbName).C(cfg.CollName)
 	var result []interface{}
 	err := c.Find(nil).All(&result)
 	if err != nil {
@@ -34,11 +37,10 @@ func getHandler(cfg dbConfig, db *mgo.Session, w http.ResponseWriter, r *http.Re
 	fmt.Fprintf(w, "%s", jsonResult)
 }
 
-func main() {
-	cfg := dbConfig{"db", "analytics"}
-
+// Start server with given config
+func Start(cfg Config) {
 	fmt.Println("Connect to mongodb.")
-	db, err := mgo.Dial("localhost")
+	db, err := mgo.Dial(cfg.DbHost)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,10 +48,10 @@ func main() {
 
 	fmt.Println("Start server.")
 	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
-		sendHandler(cfg, db, w, r)
+		sendHandler(&cfg, db, w, r)
 	})
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
-		getHandler(cfg, db, w, r)
+		getHandler(&cfg, db, w, r)
 	})
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(cfg.ListenTo, nil))
 }
