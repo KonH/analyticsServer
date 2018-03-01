@@ -11,5 +11,11 @@ func main() {
 		DbName:   "db",
 		CollName: "analytics",
 	}
-	server.Start(cfg)
+	s := server.New(cfg)
+	defer s.Close()
+	err := s.Start()
+	if err != nil {
+		panic(err)
+	}
+	// TODO: Use wait
 }
