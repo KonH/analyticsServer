@@ -5,28 +5,51 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
+
+	"github.com/globalsign/mgo"
 )
 
-var history []url.Values
-
-func sendHandler(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	history = append(history, query)
+type dbConfig struct {
+	dbName   string
+	collName string
 }
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
-	response, err := json.Marshal(history)
-	if err == nil {
-		fmt.Fprintf(w, "%s", response)
-	} else {
+func sendHandler(cfg dbConfig, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
+	c := db.DB(cfg.dbName).C(cfg.collName)
+	item := r.URL.Query()
+	c.Insert(item)
+}
+
+func getHandler(cfg dbConfig, db *mgo.Session, w http.ResponseWriter, r *http.Request) {
+	c := db.DB(cfg.dbName).C(cfg.collName)
+	var result []interface{}
+	err := c.Find(nil).All(&result)
+	if err != nil {
 		log.Fatal(err)
 	}
+	jsonResult, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintf(w, "%s", jsonResult)
 }
 
 func main() {
+	cfg := dbConfig{"db", "analytics"}
+
+	fmt.Println("Connect to mongodb.")
+	db, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	fmt.Println("Start server.")
-	http.HandleFunc("/send", sendHandler)
-	http.HandleFunc("/get", getHandler)
+	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
+		sendHandler(cfg, db, w, r)
+	})
+	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
+		getHandler(cfg, db, w, r)
+	})
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
