@@ -119,3 +119,8 @@ func (s *Server) getItems() ([]interface{}, error) {
 	err := c.Find(nil).All(&result)
 	return result, err
 }
+
+func (s *Server) clearItems() error {
+	c := s.db.DB(s.cfg.DbName).C(s.cfg.CollName)
+	return c.DropCollection()
+}
