@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/KonH/analyticsServer/internal/server"
 )
 
@@ -17,5 +19,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO: Use wait
+	var input string
+	fmt.Scanln(&input)
+	s.Stop()
 }

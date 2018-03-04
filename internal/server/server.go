@@ -22,6 +22,7 @@ type Config struct {
 // Server to handle actions
 type Server struct {
 	cfg Config
+	srv *http.Server
 	db  *mgo.Session
 }
 
@@ -47,7 +48,9 @@ func (s *Server) Start() error {
 
 // Stop server
 func (s *Server) Stop() {
-	// TODO
+	if s.srv != nil {
+		s.srv.Shutdown(nil)
+	}
 }
 
 // Close server
@@ -55,11 +58,6 @@ func (s *Server) Close() {
 	if s.db != nil {
 		s.db.Close()
 	}
-}
-
-// Wait for server stopping
-func (s *Server) Wait() {
-	// TODO
 }
 
 // Internals
@@ -82,7 +80,12 @@ func (s *Server) connectToDb() error {
 
 func (s *Server) startServer() {
 	fmt.Println("Start server.")
-	log.Fatal(http.ListenAndServe(s.cfg.ListenTo, nil))
+	s.srv = &http.Server{Addr: s.cfg.ListenTo}
+	go func() {
+		if err := s.srv.ListenAndServe(); err != nil {
+			log.Printf("HttpServer: ListenAndServe() error: %s", err)
+		}
+	}()
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
