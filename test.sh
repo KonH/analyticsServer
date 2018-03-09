@@ -1,0 +1,1 @@
+go test github.com/KonH/analyticsServer/internal/server
