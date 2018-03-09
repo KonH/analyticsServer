@@ -48,3 +48,29 @@ func Test_toFlatMap(t *testing.T) {
 		})
 	}
 }
+
+func TestNew(t *testing.T) {
+	type args struct {
+		config Config
+	}
+	config := Config{
+		ListenTo: "ListenTo",
+		DbHost:   "DbHost",
+		DbName:   "DbName",
+		CollName: "CollName",
+	}
+	tests := []struct {
+		name string
+		args args
+		want Server
+	}{
+		{"Simple", args{config}, Server{cfg: config}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := New(tt.args.config); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
