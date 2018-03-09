@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -63,11 +65,12 @@ func (s *Server) Close() {
 // Internals
 
 func (s *Server) addHandlers() {
-	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
-		s.handleSend(w, r)
-	})
-	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
-		s.handleGet(w, r)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			s.handleSend(w, r)
+		} else {
+			s.handleGet(w, r)
+		}
 	})
 }
 
@@ -89,14 +92,33 @@ func (s *Server) startServer() {
 }
 
 func (s *Server) handleSend(w http.ResponseWriter, r *http.Request) {
-	item := r.URL.Query()
-	err := s.addItem(item)
+	item, err := parseBody(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
+	}
+	err = s.addItem(item)
+	if err != nil {
+		log.Println(err)
 	}
 }
 
-func (s *Server) addItem(item map[string][]string) error {
+func parseBody(bodyReader io.ReadCloser) (interface{}, error) {
+	body, err := ioutil.ReadAll(bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("parseBody: body = '%s'", body)
+	var item interface{}
+	err = json.Unmarshal(body, &item)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("parseBody: item = '%s'", item)
+	return item, nil
+}
+
+func (s *Server) addItem(item interface{}) error {
 	c := s.db.DB(s.cfg.DbName).C(s.cfg.CollName)
 	return c.Insert(item)
 }
@@ -104,12 +126,15 @@ func (s *Server) addItem(item map[string][]string) error {
 func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 	items, err := s.getItems()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	jsonResult, err := json.Marshal(items)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
+	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, "%s", jsonResult)
 }
 
