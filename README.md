@@ -16,4 +16,5 @@ It is minimalistic analytics server written on Go and uses MongoDB as storage.
 **Get data:**
 
 1. *GET* request to /
-2. All events returned
+2. If you need filtering, use ?key=value in url
+3. All suitable events returned

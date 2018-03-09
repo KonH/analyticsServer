@@ -124,7 +124,10 @@ func (s *Server) addItem(item interface{}) error {
 }
 
 func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
-	items, err := s.getItems()
+	query := r.URL.Query()
+	log.Printf("handleGet: query = '%s'\n", query)
+	flatMap := toFlatMap(query)
+	items, err := s.getItems(flatMap)
 	if err != nil {
 		log.Println(err)
 		return
@@ -138,10 +141,21 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", jsonResult)
 }
 
-func (s *Server) getItems() ([]interface{}, error) {
+func toFlatMap(m map[string][]string) map[string]string {
+	newMap := make(map[string]string)
+	for k, val := range m {
+		if len(val) > 0 {
+			newMap[k] = val[0]
+		}
+	}
+	return newMap
+}
+
+func (s *Server) getItems(query map[string]string) ([]interface{}, error) {
 	c := s.db.DB(s.cfg.DbName).C(s.cfg.CollName)
 	var result []interface{}
-	err := c.Find(nil).All(&result)
+	log.Printf("getItems: filter: '%s'", query)
+	err := c.Find(query).All(&result)
 	return result, err
 }
 
